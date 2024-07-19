@@ -1,0 +1,44 @@
+@page "/register/{id:int}"
+@using Registrar.Data
+@using Registrar.Models
+@inject NavigationManager Navigation
+
+<div class="container mt-4">
+    <h3>Register Student</h3>
+    @if (student == null)
+    {
+        <p>Invalid student ID</p>
+        <NavLink href="/">Back to Students</NavLink>
+    }
+    else
+    {
+        <p>@student.FirstName @student.LastName - @student.Id</p>
+        <EditForm Model="student" class="mt-3">
+            @foreach (var course in Helper.GetCourses())
+            {
+                <div class="form-check">
+                    <InputCheckbox class="form-check-input" @bind-Value="course.isEnrolled" />
+                    <label class="form-check-label">@course</label>
+                </div>
+            }
+            <button type="submit" class="btn btn-primary">Register Student</button>
+            <NavLink class="btn btn-secondary ml-2" href="/">Cancel</NavLink>
+        </EditForm>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int id { get; set; }
+
+    private Student? student;
+
+    protected override void OnInitialized()
+    {
+        student = Helper.GetStudents().FirstOrDefault(s => s.Id == id);
+        if (student == null)
+        {
+            Navigation.NavigateTo("/");
+        }
+    }
+}

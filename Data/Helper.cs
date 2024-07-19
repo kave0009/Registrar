@@ -1,71 +1,37 @@
-﻿namespace Registrar;
+﻿using Registrar.Models;
 
-public class Helper
+namespace Registrar.Data
 {
-  public static List<Course> GetCourses ()
+  public static class Helper
   {
-    List<Course> courses = [];
-
-    Course course = new Course
+    public static List<Course> GetCourses()
     {
-      Code = "CST8282",
-      Title = "Introduction to Database Systems",
-      WeeklyHours = 4
-    };
-    courses.Add(course);
+      List<Course> courses = new List<Course>();
 
-    course = new Course
+      courses.Add(new Course { Code = "CST8282", Title = "Introduction to Database Systems", WeeklyHours = 4 });
+      courses.Add(new Course { Code = "CST8253", Title = "Web Programming II", WeeklyHours = 2 });
+      courses.Add(new Course { Code = "CST8256", Title = "Web Programming Language I", WeeklyHours = 5 });
+      courses.Add(new Course { Code = "CST8255", Title = "Web Imaging and Animations", WeeklyHours = 2 });
+      courses.Add(new Course { Code = "CST8254", Title = "Network Operating System", WeeklyHours = 1 });
+      courses.Add(new Course { Code = "CST2200", Title = "Data Warehouse Design", WeeklyHours = 3 });
+      courses.Add(new Course { Code = "CST2240", Title = "Advance Database topics", WeeklyHours = 1 });
+
+      return courses;
+    }
+
+    public static List<string> GetStudentTypes()
     {
-      Code = "CST8253",
-      Title = "Web Programming II",
-      WeeklyHours = 2
-    };
-    courses.Add(course);
+      return new List<string> { "Full Time", "Part Time", "Coop" };
+    }
 
-    course = new Course
+    public static List<Student> GetStudents()
     {
-      Code = "CST8256",
-      Title = "Web Programming Language I",  
-      WeeklyHours = 5
-    };
-    courses.Add(course);
-
-    course = new Course
-    {
-      Code = "CST8255",
-      Title = "Web Imaging and Animations",  
-      WeeklyHours = 2
-    };
-    courses.Add(course);
-
-    course = new Course
-    {
-      Code = "CST8254",
-      Title = "Network Operating System",  
-      WeeklyHours = 1
-    };
-    courses.Add(course);
-
-    course = new Course
-    {
-      Code = "CST2200",
-      Title = "Data Warehouse Design",  
-      WeeklyHours = 3
-    };
-    courses.Add(course);
-
-    course = new Course
-    {
-      Code = "CST2240",
-      Title = "Advance Database topics",  
-      WeeklyHours = 1
-    };
-    courses.Add(course);   
-
-    return courses;
-  }
-
-  public static List<string> GetStudentTypes () {
-    return ["Full Time", "Part Time", "Coop"];
+      return new List<Student>
+            {
+                new Student { Id = 314486, FirstName = "John", LastName = "Smith", Type = "Full Time" },
+                new Student { Id = 268072, FirstName = "Martha", LastName = "Jones", Type = "Part Time" },
+                new Student { Id = 791864, FirstName = "Rose", LastName = "Tyler", Type = "Coop" }
+            };
+    }
   }
 }
