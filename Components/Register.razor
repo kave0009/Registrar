@@ -1,44 +1,228 @@
-@page "/register/{id:int}"
-@using Registrar.Data
-@using Registrar.Models
+@page "/register/{studentId:int}"
+@using System.Net.Http.Json
+@inject HttpClient Http
 @inject NavigationManager Navigation
+@using Microsoft.AspNetCore.SignalR.Client
 
-<div class="container mt-4">
-    <h3>Register Student</h3>
-    @if (student == null)
-    {
-        <p>Invalid student ID</p>
-        <NavLink href="/">Back to Students</NavLink>
-    }
-    else
-    {
-        <p>@student.FirstName @student.LastName - @student.Id</p>
-        <EditForm Model="student" class="mt-3">
-            @foreach (var course in Helper.GetCourses())
+<h3>Register Student</h3>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+<EditForm Model="student" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary class="alert alert-danger" />
+    <div class="mb-3">
+        <h4>@student.FirstName @student.LastName - @student.Id</h4>
+        <p>The following courses are currently available for registration:</p>
+    </div>
+    <table class="table table-hover">
+        <tbody>
+            @foreach (var course in courses)
             {
-                <div class="form-check">
-                    <InputCheckbox class="form-check-input" @bind-Value="course.isEnrolled" />
-                    <label class="form-check-label">@course</label>
-                </div>
+                <tr>
+                    <td>
+                        <input type="checkbox" checked="@course.IsRegistered"
+                            @onchange="@(async e => await OnCheckboxChanged(e, course))" />
+                        @course.Course.Title - @course.Course.WeeklyHours hours per week
+                    </td>
+                </tr>
             }
-            <button type="submit" class="btn btn-primary">Register Student</button>
-            <NavLink class="btn btn-secondary ml-2" href="/">Cancel</NavLink>
-        </EditForm>
-    }
-</div>
+        </tbody>
+    </table>
+    <button type="submit" class="btn btn-primary shadow-sm">Register Student</button>
+    <button type="button" class="btn btn-secondary ml-2 shadow-sm" @onclick="NavigateToHome">Cancel</button>
+</EditForm>
+
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <div class="alert alert-success mt-2">@successMessage</div>
+}
 
 @code {
-    [Parameter]
-    public int id { get; set; }
+    [Parameter] public int studentId { get; set; }
+    private Student student = new Student();
+    private List<CourseViewModel> courses = new List<CourseViewModel>();
+    private HubConnection? hubConnection;
+    private int totalHours;
+    private int totalCourses;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
 
-    private Student? student;
-
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        student = Helper.GetStudents().FirstOrDefault(s => s.Id == id);
-        if (student == null)
+        hubConnection = new HubConnectionBuilder()
+        .WithUrl(Navigation.ToAbsoluteUri("/registrationHub"))
+        .Build();
+
+        hubConnection.On<string>("ReceiveMessage", (message) =>
         {
-            Navigation.NavigateTo("/");
+            Console.WriteLine(message);
+            StateHasChanged();
+        });
+
+        await hubConnection.StartAsync();
+
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            var studentResponse = await Http.GetAsync($"api/students/{studentId}");
+            if (!studentResponse.IsSuccessStatusCode)
+            {
+                throw new Exception("Error fetching student data.");
+            }
+            student = await studentResponse.Content.ReadFromJsonAsync<Student>() ?? new Student();
+
+            var coursesResponse = await Http.GetAsync("api/courses");
+            if (!coursesResponse.IsSuccessStatusCode)
+            {
+                throw new Exception("Error fetching courses data.");
+            }
+            var allCourses = await coursesResponse.Content.ReadFromJsonAsync<List<Course>>() ?? new List<Course>();
+
+            var registrationsResponse = await Http.GetAsync($"api/registrations/{studentId}");
+            if (!registrationsResponse.IsSuccessStatusCode)
+            {
+                throw new Exception("Error fetching registrations data.");
+            }
+            var registeredCourses = await registrationsResponse.Content.ReadFromJsonAsync<List<Registration>>() ?? new
+            List<Registration>();
+
+            courses = allCourses.Select(c => new CourseViewModel
+                {
+                    Course = c,
+                    IsRegistered = registeredCourses.Any(r => r.CourseId == c.Id)
+                }).ToList();
+
+            CalculateTotals();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading data: {ex.Message}");
+            errorMessage = "Error loading data. Please try again.";
+        }
+    }
+
+    private async Task OnCheckboxChanged(ChangeEventArgs e, CourseViewModel courseViewModel)
+    {
+        bool isChecked = (bool)(e?.Value ?? false);
+        courseViewModel.IsRegistered = isChecked;
+        CalculateTotals();
+
+        var registration = new Registration
+            {
+                StudentId = student.Id,
+                CourseId = courseViewModel.Course.Id
+            };
+
+        try
+        {
+            if (isChecked)
+            {
+                await Http.PostAsJsonAsync("api/registrations", registration);
+                await hubConnection?.SendAsync("SendMessage", "Course registered");
+            }
+            else
+            {
+                var request = new HttpRequestMessage(HttpMethod.Delete, "api/registrations")
+                    {
+                        Content = JsonContent.Create(registration)
+                    };
+                await Http.SendAsync(request);
+                await hubConnection?.SendAsync("SendMessage", "Course unregistered");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error updating registration: {ex.Message}");
+            errorMessage = "Error updating registration. Please try again.";
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (!ValidateRegistration())
+        {
+            return;
+        }
+
+        try
+        {
+            // Remove all registrations for the student first
+            await Http.DeleteAsync($"api/registrations/{student.Id}");
+
+            // Add all registered courses
+            foreach (var course in courses.Where(c => c.IsRegistered))
+            {
+                var registration = new Registration
+                    {
+                        StudentId = student.Id,
+                        CourseId = course.Course.Id
+                    };
+                await Http.PostAsJsonAsync("api/registrations", registration);
+            }
+
+            successMessage = $"Student registered for {totalCourses} course(s) totaling {totalHours} hours per week.";
+            await hubConnection?.SendAsync("SendMessage", "Student updated");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error handling valid submit: {ex.Message}");
+            errorMessage = "Error processing registration. Please try again.";
+        }
+    }
+
+    private bool ValidateRegistration()
+    {
+        errorMessage = string.Empty;
+
+        if (student.Type == "FullTime" && totalHours > 16)
+        {
+            errorMessage = "Full-time students can only register for a maximum of 16 hours per week.";
+            return false;
+        }
+        if (student.Type == "PartTime" && totalCourses > 3)
+        {
+            errorMessage = "Part-time students can only register for a maximum of 3 courses.";
+            return false;
+        }
+        if (student.Type == "Coop" && (totalHours > 4 || totalCourses > 2))
+        {
+            errorMessage = "Coop students can only register for a maximum of 4 hours per week and 2 courses.";
+            return false;
+        }
+
+        return true;
+    }
+
+    private void CalculateTotals()
+    {
+        totalHours = courses.Where(c => c.IsRegistered).Sum(c => c.Course.WeeklyHours);
+        totalCourses = courses.Count(c => c.IsRegistered);
+    }
+
+    private void NavigateToHome()
+    {
+        Navigation.NavigateTo("/");
+    }
+
+    private class CourseViewModel
+    {
+        public Course Course { get; set; } = new Course();
+        public bool IsRegistered { get; set; }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection != null)
+        {
+            await hubConnection.DisposeAsync();
         }
     }
 }

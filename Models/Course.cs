@@ -1,14 +1,15 @@
-﻿namespace Registrar;
+﻿using System.ComponentModel.DataAnnotations;
 
-public class Course
+namespace Registrar.Models
 {
-  public string Code { get; set; } = "";
-  public string Title { get; set; } = "";
-  public int WeeklyHours { get; set; }
-  public bool isEnrolled { get; set; } = false;
-
-  public override string ToString()
+  public class Course
   {
-      return Code + " " + Title + " " + WeeklyHours.ToString() + (WeeklyHours==1 ? "hour":" hours") + " per week";
+    public int Id { get; set; }
+    [Required]
+    public string Code { get; set; } = string.Empty;
+    [Required]
+    public string Title { get; set; } = string.Empty;
+    public int WeeklyHours { get; set; }
+    public ICollection<Registration> Registrations { get; set; } = new List<Registration>();
   }
 }
