@@ -163,31 +163,3 @@ tbody td {
     vertical-align: top;
     border-top: 1px solid #dee2e6;
 }
-
-.section-dark {
-    background-color: #343a40 !important;
-    color: aliceblue;
-    padding: 1rem;
-    border-radius: 0.5rem;
-    margin-bottom: 1rem;
-}
-
-/* .btn-square {
-    width: 2.5rem !important;
-    height: 2.5rem !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #6c757d;
-    color: white;
-    border: none;
-    border-radius: 0.25rem;
-    font-size: 1rem;
-    transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
-}
-
-.btn-square:hover {
-    transform: scale(1.1);
-    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
-    background-color: #5a6268;
-} */
