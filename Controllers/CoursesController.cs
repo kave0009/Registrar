@@ -10,30 +10,33 @@ namespace Registrar.Controllers
     public class CoursesController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
-        private readonly ILogger<CoursesController> _logger;
 
-        public CoursesController(ApplicationDbContext context, ILogger<CoursesController> logger)
+        public CoursesController(ApplicationDbContext context)
         {
             _context = context;
-            _logger = logger;
         }
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Course>>> GetCourses()
         {
-            try
-            {
-                var courses = await _context.Courses.ToListAsync();
-                _logger.LogInformation("Retrieved {Count} courses.", courses.Count);
-                return courses;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An error occurred while getting courses.");
-                return StatusCode(500, "Internal server error");
-            }
+            var courses = await _context.Courses.ToListAsync();
+            return Ok(courses);
         }
 
-        // Other CRUD operations...
+        [HttpGet("student/{studentId}")]
+        public async Task<ActionResult<IEnumerable<Course>>> GetStudentCourses(int studentId)
+        {
+            var courses = await _context.Registrations
+                .Where(r => r.StudentId == studentId)
+                .Select(r => r.Course)
+                .ToListAsync();
+
+            if (!courses.Any())
+            {
+                return Ok(new List<Course>());
+            }
+
+            return Ok(courses);
+        }
     }
 }

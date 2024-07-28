@@ -24,11 +24,9 @@ namespace Registrar.Data
                 .Property(e => e.Type)
                 .HasConversion<string>();
 
-            // Define composite key for Registration
             modelBuilder.Entity<Registration>()
                 .HasKey(r => new { r.StudentId, r.CourseId });
 
-            // Configure relationships if necessary
             modelBuilder.Entity<Registration>()
                 .HasOne(r => r.Student)
                 .WithMany(s => s.Registrations)
