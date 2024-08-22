@@ -34,6 +34,18 @@
     </table>
     <button type="submit" class="btn btn-primary shadow-sm">Register Student</button>
     <button type="button" class="btn btn-secondary ml-2 shadow-sm" @onclick="NavigateToHome">Cancel</button>
+    <div class="card mb-4 mt-4">
+        <div class="card-body">
+            <h5 class="card-title">Validation Rules</h5>
+            <p class="card-text">The validation rules applied are as follows:</p>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item">Full-time students' maximum weekly hours is 16.</li>
+                <li class="list-group-item">Part-time students' maximum number of courses is 3.</li>
+                <li class="list-group-item">Coop students' maximum weekly hours is 4, and the maximum number of courses
+                    is 2.</li>
+            </ul>
+        </div>
+    </div>
 </EditForm>
 
 @if (!string.IsNullOrEmpty(successMessage))
